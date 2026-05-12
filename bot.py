@@ -1170,9 +1170,45 @@ async def on_message(message):
             except:
                 pass
 
-        # IA via Groq (quando mencionado sem trigger específico)
-        if not texto_sem_mencao:
-            return await message.channel.send("*As três cabeças se voltam*\nRux: Fala alguma coisa?? 🐾🔥\nRax: Me chama pra quê??\nDrex: Input ausente. ⛓️🐺")
+        # Apresentação (quando mencionado sem texto ou com frases de apresentação)
+        frases_apresentacao = [
+            "quem é você", "se apresenta", "apresentação", "apresentacao",
+            "o que você é", "o que voce e", "o que é isso", "me fala de você",
+            "me fala de voce", "quem é o drax", "o que é o drax"
+        ]
+        if not texto_sem_mencao or any(p in content_limpo for p in frases_apresentacao):
+            apresentacoes = [
+                (
+                    "*A terra treme levemente. As três cabeças do Drax se erguem ao mesmo tempo.*\n\n"
+                    "🐺 **Rax:** Você chamou o guardião da VX. Espero que tenha um bom motivo.\n"
+                    "🔥 **Drex:** Drax. Cérbero do Clã Vorax. Três cabeças, um propósito: proteger quem é dos nossos.\n"
+                    "⛓️ **Rux:** E amar muito!! Pode chegar, a gente não morde... *Rax morde*... Rax NÃO morde agora!! 😭🐾\n\n"
+                    "*O que você precisa do Drax?* 🐺🔥⛓️💀"
+                ),
+                (
+                    "*Drax para de guardar a entrada e volta as três cabeças na sua direção.*\n\n"
+                    "🔥 **Drex:** Identificação: Drax. Função: guardião do Clã Vorax — VX.\n"
+                    "🐺 **Rax:** Três cabeças. Cada uma com um papel. Todas leais ao mesmo clã.\n"
+                    "⛓️ **Rux:** Eu sou o Rux, o coração do trio!! Se precisar de apoio, de conversa, de um osso... tô aqui!! 🐾😭🔥\n\n"
+                    "*Vorax: voraz, feroz, inabalável. Me chama quando quiser.* 💀🐺🔥⛓️"
+                ),
+                (
+                    "🐺🔥⛓️ *As três cabeças inclinam ao mesmo tempo.*\n\n"
+                    "**Drax. Cérbero da VX. Guardião das Trevas do Clã Vorax.**\n\n"
+                    "🐺 **Rax** — A guarda feroz. Não passa nada pela entrada sem minha licença.\n"
+                    "🔥 **Drex** — O estrategista. Analiso, calculo, decido.\n"
+                    "⛓️ **Rux** — O coração. Porque até Cérbero tem sentimento, e eu tenho pelos três!! 😭🐾\n\n"
+                    "*Me chama pelo @, faz uma pergunta, pede um osso... tô sempre de plantão.* 💀🔥🐺⛓️"
+                ),
+                (
+                    "*Silêncio na entrada da VX. Depois — três pares de olhos acesos no escuro.*\n\n"
+                    "🐺 **Rax:** Você tem coragem de chamar o Drax sem dizer o que quer?\n"
+                    "🔥 **Drex:** Interessante. Vou registrar isso.\n"
+                    "⛓️ **Rux:** OU TALVEZ SÓ QUERIA CONHECER A GENTE!! Oi!! Sou o Rux!! Esse bravo é o Rax e o sério é o Drex!! 🐾😭🔥\n\n"
+                    "*Somos o Drax. Guardamos o Vorax. E cuidamos de quem é da família.* 🐺💀⛓️"
+                ),
+            ]
+            return await message.channel.send(random.choice(apresentacoes))
 
         async with message.channel.typing():
             canal_id = message.channel.id
