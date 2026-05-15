@@ -1339,7 +1339,7 @@ async def status_cmd(ctx):
 # ══════════════════════════════════════════════════════════════════
 
 TICKET_PANEL_CHANNEL_ID = 1498950950746980534
-TICKET_CATEGORY_ID    = 0   # ⚠️ ID da categoria "📋 TICKETS" — substitua
+TICKET_CATEGORY_ID    = 1498950950746980533  # Categoria onde os tickets são criados
 TICKET_STAFF_ROLE_IDS = []  # ⚠️ IDs dos cargos de staff. Ex: [123456, 789012]
 
 TICKET_COLOR_VORAX = 0x8b0000
