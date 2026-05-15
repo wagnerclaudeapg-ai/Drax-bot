@@ -890,6 +890,8 @@ async def on_ready():
         )
     except:
         pass
+    # Envia o painel de tickets automaticamente ao iniciar
+    await _enviar_painel_tickets()
 
 # ═══════════════════════════════════════════════════════════
 #  EVENTO ON_MESSAGE — LÓGICA PRINCIPAL DO DRAX
@@ -1334,25 +1336,15 @@ async def status_cmd(ctx):
 
 # ══════════════════════════════════════════════════════════════════
 #  🎫  DRAX TICKET SYSTEM — VORAX GUARDIAN v1.0
-#      Sistema de Tickets — Clã Vorax — VX
 # ══════════════════════════════════════════════════════════════════
 
-# ID do canal onde o painel de tickets será enviado
 TICKET_PANEL_CHANNEL_ID = 1498950950746980534
+TICKET_CATEGORY_ID      = 0   # ⚠️ ID da categoria "📋 TICKETS" — substitua
+TICKET_STAFF_ROLE_IDS   = []  # ⚠️ IDs dos cargos de staff. Ex: [123456, 789012]
 
-# ID da categoria onde os canais de ticket serão criados
-# Crie uma categoria "📋 TICKETS" no Discord e cole o ID aqui
-TICKET_CATEGORY_ID = 0  # ⚠️ Substitua pelo ID da categoria de tickets
-
-# Cargo(s) que podem ver e gerenciar todos os tickets (staff, moderação, etc.)
-# Deixe como lista vazia [] para apenas admins terem acesso
-TICKET_STAFF_ROLE_IDS = []  # ⚠️ Ex: [123456789, 987654321]
-
-# Cor padrão dos embeds de ticket
 TICKET_COLOR_VORAX = 0x8b0000
 TICKET_COLOR_CLOSE = 0x2c2f33
 
-# ── Mapeamento dos tipos de ticket ──
 TICKET_TYPES = {
     "suporte": {
         "label":    "Suporte",
@@ -1361,7 +1353,7 @@ TICKET_TYPES = {
         "color":    0x8b0000,
         "mensagem": (
             "🛠️ **Rax:** Tá com problema? Fala aí, a guarda tá de pé.\n"
-            "🔥 **Drex:** Descreva seu problema com o máximo de detalhes. Aguarde um membro da staff.\n"
+            "🔥 **Drex:** Descreva seu problema com detalhes. Aguarde a staff.\n"
             "⛓️ **Rux:** Pode confiar, a gente vai te ajudar!! 🐾"
         ),
     },
@@ -1371,9 +1363,9 @@ TICKET_TYPES = {
         "prefix":   "denuncia",
         "color":    0xff0000,
         "mensagem": (
-            "🚨 **Rax:** Denúncia recebida. Isso é sério e será tratado com seriedade.\n"
-            "🔥 **Drex:** Informe: **usuário** denunciado, **motivo** e **provas** (prints, etc.).\n"
-            "⛓️ **Rux:** Obrigado por ajudar a proteger o clã. 🐺"
+            "🚨 **Rax:** Denúncia recebida. Será tratada com seriedade.\n"
+            "🔥 **Drex:** Informe: **usuário** denunciado, **motivo** e **provas**.\n"
+            "⛓️ **Rux:** Obrigado por proteger o clã. 🐺"
         ),
     },
     "lider": {
@@ -1384,7 +1376,7 @@ TICKET_TYPES = {
         "mensagem": (
             "👑 **Drex:** Candidatura ou assunto de liderança registrado.\n"
             "🐺 **Rax:** Apenas os dignos lideram no Vorax.\n"
-            "⛓️ **Rux:** Conta tudo sobre você e seu interesse!! Tô animado!! 🔥"
+            "⛓️ **Rux:** Conta tudo sobre você!! Tô animado!! 🔥"
         ),
     },
     "anjo": {
@@ -1393,8 +1385,8 @@ TICKET_TYPES = {
         "prefix":   "anjo",
         "color":    0x7289da,
         "mensagem": (
-            "😇 **Rux:** Olá! O programa Anjo existe pra você não se sentir sozinho(a) aqui!! 🐾\n"
-            "🔥 **Drex:** Diga o que precisa: apresentação, orientação ou suporte emocional.\n"
+            "😇 **Rux:** O programa Anjo existe pra você não se sentir sozinho(a)!! 🐾\n"
+            "🔥 **Drex:** Diga o que precisa: apresentação, orientação ou apoio.\n"
             "🐺 **Rax:** No Vorax, ninguém fica pra trás."
         ),
     },
@@ -1405,14 +1397,13 @@ TICKET_TYPES = {
         "color":    0x57f287,
         "mensagem": (
             "💡 **Drex:** Ideia registrada. O Vorax cresce com cada sugestão.\n"
-            "⛓️ **Rux:** Adoroooo quando alguém quer melhorar o clã!! Conta tudo!! 🐾🔥\n"
+            "⛓️ **Rux:** Adoroooo quando alguém quer melhorar o clã!! 🐾🔥\n"
             "🐺 **Rax:** Seja claro e detalhado. Boa ideia tem peso aqui."
         ),
     },
 }
 
 
-# ── View: Botão de fechar ticket (dentro do canal) ──
 class TicketCloseView(discord.ui.View):
     def __init__(self, member_id: int = None):
         super().__init__(timeout=None)
@@ -1425,23 +1416,20 @@ class TicketCloseView(discord.ui.View):
     )
     async def btn_fechar(self, interaction: discord.Interaction, button: discord.ui.Button):
         membro = interaction.user
-        tem_permissao = membro.guild_permissions.administrator
-        if not tem_permissao:
+        tem_perm = membro.guild_permissions.administrator
+        if not tem_perm:
             for role_id in TICKET_STAFF_ROLE_IDS:
                 role = interaction.guild.get_role(role_id)
                 if role and role in membro.roles:
-                    tem_permissao = True
+                    tem_perm = True
                     break
-        if not tem_permissao and self.member_id:
-            tem_permissao = (membro.id == self.member_id)
-
-        if not tem_permissao:
+        if not tem_perm and self.member_id:
+            tem_perm = (membro.id == self.member_id)
+        if not tem_perm:
             return await interaction.response.send_message(
                 "⛔ **Rax:** Você não tem permissão para fechar este ticket.", ephemeral=True
             )
-
         await interaction.response.send_message("🔒 Fechando ticket em **5 segundos**...")
-
         embed_close = discord.Embed(
             title="🔒 Ticket Encerrado — VX Vorax",
             description=(
@@ -1463,7 +1451,6 @@ class TicketCloseView(discord.ui.View):
             pass
 
 
-# ── View: Painel principal com os 5 botões ──
 class TicketPanelView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -1475,18 +1462,15 @@ class TicketPanelView(discord.ui.View):
         cfg    = TICKET_TYPES[tipo]
         prefix = cfg["prefix"]
 
-        # Verifica se já existe ticket aberto para este usuário neste tipo
         nome_canal = f"{prefix}-{member.name}".lower().replace(" ", "-")[:40]
         existing = discord.utils.get(guild.text_channels, name=nome_canal)
         if existing:
             return await interaction.followup.send(
-                f"⚠️ Você já possui um ticket aberto: {existing.mention}", ephemeral=True
+                f"⚠️ Você já tem um ticket aberto: {existing.mention}", ephemeral=True
             )
 
-        # Categoria de tickets (opcional)
         category = guild.get_channel(TICKET_CATEGORY_ID) if TICKET_CATEGORY_ID else None
 
-        # Permissões do canal privado
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=False),
             member:             discord.PermissionOverwrite(
@@ -1539,58 +1523,54 @@ class TicketPanelView(discord.ui.View):
             await msg.pin()
         except Exception:
             pass
-
         await interaction.followup.send(
             f"{cfg['emoji']} Ticket criado! → {canal.mention}", ephemeral=True
         )
 
     @discord.ui.button(label="Suporte",          emoji="🛠️", style=discord.ButtonStyle.danger,    custom_id="ticket_suporte")
-    async def btn_suporte(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._abrir_ticket(interaction, "suporte")
+    async def btn_suporte(self, i: discord.Interaction, b: discord.ui.Button):
+        await self._abrir_ticket(i, "suporte")
 
     @discord.ui.button(label="Denúncia",         emoji="🚨", style=discord.ButtonStyle.danger,    custom_id="ticket_denuncia")
-    async def btn_denuncia(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._abrir_ticket(interaction, "denuncia")
+    async def btn_denuncia(self, i: discord.Interaction, b: discord.ui.Button):
+        await self._abrir_ticket(i, "denuncia")
 
     @discord.ui.button(label="Líder de Torcida", emoji="👑", style=discord.ButtonStyle.secondary, custom_id="ticket_lider")
-    async def btn_lider(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._abrir_ticket(interaction, "lider")
+    async def btn_lider(self, i: discord.Interaction, b: discord.ui.Button):
+        await self._abrir_ticket(i, "lider")
 
     @discord.ui.button(label="Anjo",             emoji="😇", style=discord.ButtonStyle.primary,   custom_id="ticket_anjo")
-    async def btn_anjo(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._abrir_ticket(interaction, "anjo")
+    async def btn_anjo(self, i: discord.Interaction, b: discord.ui.Button):
+        await self._abrir_ticket(i, "anjo")
 
     @discord.ui.button(label="Ideias",           emoji="💡", style=discord.ButtonStyle.success,   custom_id="ticket_ideias")
-    async def btn_ideias(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._abrir_ticket(interaction, "ideias")
+    async def btn_ideias(self, i: discord.Interaction, b: discord.ui.Button):
+        await self._abrir_ticket(i, "ideias")
 
 
-# ── Cog do sistema de tickets ──
-class TicketCog(commands.Cog, name="TicketSystem"):
-    """Sistema de Tickets — Clã Vorax — DRAX TICKET SYSTEM."""
+# Registra as views persistentes no bot (botões funcionam após reinicialização)
+bot.add_view(TicketPanelView())
+bot.add_view(TicketCloseView())
 
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
-        # Registra views persistentes (sobrevivem a reinicializações do bot)
-        self.bot.add_view(TicketPanelView())
-        self.bot.add_view(TicketCloseView())
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        await asyncio.sleep(6)  # aguarda o DraxSecurityCog e o on_ready principal finalizarem
-        canal = self.bot.get_channel(TICKET_PANEL_CHANNEL_ID)
-        if not canal:
-            print(f"[TicketCog] ⚠️ Canal {TICKET_PANEL_CHANNEL_ID} não encontrado.")
+async def _enviar_painel_tickets():
+    """Envia o painel de tickets no canal configurado. Evita duplicar."""
+    try:
+        canal = bot.get_channel(TICKET_PANEL_CHANNEL_ID)
+        if canal is None:
+            # Fallback: tenta buscar via API
+            canal = await bot.fetch_channel(TICKET_PANEL_CHANNEL_ID)
+        if canal is None:
+            print(f"[Tickets] ❌ Canal {TICKET_PANEL_CHANNEL_ID} não encontrado.")
             return
-        # Evita duplicar o painel se já existir
-        async for msg in canal.history(limit=20):
-            if msg.author == self.bot.user and msg.embeds:
-                if "SISTEMA DE TICKETS" in (msg.embeds[0].title or ""):
-                    print("[TicketCog] ✅ Painel já existe no canal. Nenhum novo painel enviado.")
+        # Verifica se já existe painel no canal
+        async for msg in canal.history(limit=30):
+            if msg.author == bot.user and msg.embeds:
+                titulo = msg.embeds[0].title or ""
+                if "SISTEMA DE TICKETS" in titulo:
+                    print("[Tickets] ✅ Painel já existe — nenhum novo painel enviado.")
                     return
-        await self._enviar_painel(canal)
-
-    async def _enviar_painel(self, canal: discord.TextChannel):
+        # Monta e envia o painel
         embed = discord.Embed(
             title="🎫 SISTEMA DE TICKETS — VX VORAX",
             description=(
@@ -1616,59 +1596,70 @@ class TicketCog(commands.Cog, name="TicketSystem"):
         )
         embed.set_footer(text="DRAX TICKET SYSTEM — VORAX GUARDIAN • Clã Vorax / VX")
         await canal.send(embed=embed, view=TicketPanelView())
-        print(f"[TicketCog] ✅ Painel de tickets enviado no canal #{canal.name}.")
+        print(f"[Tickets] ✅ Painel enviado no canal #{canal.name}.")
+    except Exception as e:
+        print(f"[Tickets] ❌ Erro ao enviar painel: {e}")
 
-    @commands.command(name="ticket_setup")
-    @commands.has_permissions(administrator=True)
-    async def ticket_setup(self, ctx):
-        """Reenvia o painel de tickets no canal configurado. (Apenas admins)"""
-        canal = self.bot.get_channel(TICKET_PANEL_CHANNEL_ID)
-        if not canal:
+
+@bot.command(name="ticket_setup")
+@commands.has_permissions(administrator=True)
+async def ticket_setup(ctx):
+    """Reenvia o painel de tickets manualmente. (Apenas admins)"""
+    canal = bot.get_channel(TICKET_PANEL_CHANNEL_ID)
+    if not canal:
+        try:
+            canal = await bot.fetch_channel(TICKET_PANEL_CHANNEL_ID)
+        except Exception:
             return await ctx.send(f"⚠️ Canal `{TICKET_PANEL_CHANNEL_ID}` não encontrado.")
-        await self._enviar_painel(canal)
-        await ctx.send(f"✅ Painel reenviado em {canal.mention}!", delete_after=8)
-        try:
-            await ctx.message.delete()
-        except Exception:
-            pass
+    # Apaga painel antigo se existir
+    async for msg in canal.history(limit=30):
+        if msg.author == bot.user and msg.embeds:
+            if "SISTEMA DE TICKETS" in (msg.embeds[0].title or ""):
+                await msg.delete()
+                break
+    await _enviar_painel_tickets()
+    await ctx.send(f"✅ Painel reenviado em {canal.mention}!", delete_after=8)
+    try:
+        await ctx.message.delete()
+    except Exception:
+        pass
 
-    @commands.command(name="fechar_ticket")
-    async def fechar_ticket(self, ctx):
-        """Fecha o ticket atual manualmente pelo comando."""
-        canal = ctx.channel
-        prefixos = [cfg["prefix"] for cfg in TICKET_TYPES.values()]
-        if not any(canal.name.startswith(p + "-") for p in prefixos):
-            return await ctx.send("⚠️ Este canal não é um ticket.", delete_after=5)
 
-        tem_perm = ctx.author.guild_permissions.administrator
-        if not tem_perm:
-            for role_id in TICKET_STAFF_ROLE_IDS:
-                role = ctx.guild.get_role(role_id)
-                if role and role in ctx.author.roles:
-                    tem_perm = True
-                    break
-        if not tem_perm:
-            return await ctx.send("⛔ **Rax:** Você não tem permissão para fechar este ticket.", delete_after=5)
-
-        embed_close = discord.Embed(
-            title="🔒 Ticket Encerrado — VX Vorax",
-            description=(
-                f"🐺 **Rax:** Ticket finalizado.\n"
-                f"🔥 **Drex:** Encerrado por {ctx.author.mention} "
-                f"em `{datetime.utcnow().strftime('%d/%m/%Y às %H:%M UTC')}`.\n"
-                f"⛓️ **Rux:** Obrigado por usar o sistema de tickets do Vorax! 🐾\n\n"
-                f"*O canal será deletado em 5 segundos...*"
-            ),
-            color=TICKET_COLOR_CLOSE,
-            timestamp=datetime.utcnow(),
-        )
-        embed_close.set_footer(text="DRAX TICKET SYSTEM — VORAX GUARDIAN")
-        await ctx.send(embed=embed_close)
-        await asyncio.sleep(5)
-        try:
-            await canal.delete(reason=f"Ticket fechado por {ctx.author}")
-        except Exception:
-            pass
+@bot.command(name="fechar_ticket")
+async def fechar_ticket(ctx):
+    """Fecha o ticket atual pelo comando."""
+    canal = ctx.channel
+    prefixos = [cfg["prefix"] for cfg in TICKET_TYPES.values()]
+    if not any(canal.name.startswith(p + "-") for p in prefixos):
+        return await ctx.send("⚠️ Este canal não é um ticket.", delete_after=5)
+    tem_perm = ctx.author.guild_permissions.administrator
+    if not tem_perm:
+        for role_id in TICKET_STAFF_ROLE_IDS:
+            role = ctx.guild.get_role(role_id)
+            if role and role in ctx.author.roles:
+                tem_perm = True
+                break
+    if not tem_perm:
+        return await ctx.send("⛔ **Rax:** Sem permissão para fechar este ticket.", delete_after=5)
+    embed_close = discord.Embed(
+        title="🔒 Ticket Encerrado — VX Vorax",
+        description=(
+            f"🐺 **Rax:** Ticket finalizado.\n"
+            f"🔥 **Drex:** Encerrado por {ctx.author.mention} "
+            f"em `{datetime.utcnow().strftime('%d/%m/%Y às %H:%M UTC')}`.\n"
+            f"⛓️ **Rux:** Obrigado por usar o sistema de tickets do Vorax! 🐾\n\n"
+            f"*O canal será deletado em 5 segundos...*"
+        ),
+        color=TICKET_COLOR_CLOSE,
+        timestamp=datetime.utcnow(),
+    )
+    embed_close.set_footer(text="DRAX TICKET SYSTEM — VORAX GUARDIAN")
+    await ctx.send(embed=embed_close)
+    await asyncio.sleep(5)
+    try:
+        await canal.delete(reason=f"Ticket fechado por {ctx.author}")
+    except Exception:
+        pass
 
 
 # ═══════════════════════════════════════════════════════════
@@ -1678,7 +1669,6 @@ class TicketCog(commands.Cog, name="TicketSystem"):
 async def _main():
     async with bot:
         await bot.add_cog(DraxSecurityCog(bot))
-        await bot.add_cog(TicketCog(bot))
         await bot.start(TOKEN)
 
 if __name__ == "__main__":
