@@ -1436,12 +1436,12 @@ class TicketCloseView(discord.ui.View):
             description=(
                 f"🐺 **Rax:** Ticket finalizado.\n"
                 f"🔥 **Drex:** Encerrado por {membro.mention} "
-                f"em `{datetime.utcnow().strftime('%d/%m/%Y às %H:%M UTC')}`.\n"
+                f"em `{discord.utils.utcnow().strftime('%d/%m/%Y às %H:%M UTC')}`.\n"
                 f"⛓️ **Rux:** Obrigado por usar o sistema de tickets! 🐾\n\n"
                 "*O canal será deletado em instantes...*"
             ),
             color=TICKET_COLOR_CLOSE,
-            timestamp=datetime.utcnow(),
+            timestamp=discord.utils.utcnow(),
         )
         embed_close.set_footer(text="DRAX TICKET SYSTEM — VORAX GUARDIAN")
         await interaction.channel.send(embed=embed_close)
@@ -1496,7 +1496,7 @@ class TicketPanelView(discord.ui.View):
             category=category,
             topic=(
                 f"Ticket de {cfg['label']} | {member} ({member.id}) | "
-                f"Aberto em {datetime.utcnow().strftime('%d/%m/%Y %H:%M UTC')}"
+                f"Aberto em {discord.utils.utcnow().strftime('%d/%m/%Y %H:%M UTC')}"
             ),
             reason=f"Ticket de {cfg['label']} aberto por {member}",
         )
@@ -1506,11 +1506,11 @@ class TicketPanelView(discord.ui.View):
                 f"Olá, {member.mention}! Seu ticket foi aberto.\n\n"
                 f"{cfg['mensagem']}\n\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"🕐 Aberto em: `{datetime.utcnow().strftime('%d/%m/%Y às %H:%M UTC')}`\n"
+                f"🕐 Aberto em: `{discord.utils.utcnow().strftime('%d/%m/%Y às %H:%M UTC')}`\n"
                 f"👤 Usuário: `{member}` (`{member.id}`)"
             ),
             color=cfg["color"],
-            timestamp=datetime.utcnow(),
+            timestamp=discord.utils.utcnow(),
         )
         embed.set_footer(text="DRAX TICKET SYSTEM — VORAX GUARDIAN • Use o botão abaixo para fechar.")
         if member.display_avatar:
@@ -1587,7 +1587,7 @@ async def ticket_panel_task():
                 "*⛓️ Rux: Mas pode vir sem medo, a gente tá aqui!! 🐾*"
             ),
             color=TICKET_COLOR_VORAX,
-            timestamp=datetime.utcnow(),
+            timestamp=discord.utils.utcnow(),
         )
         embed.set_footer(text="DRAX TICKET SYSTEM — VORAX GUARDIAN • Clã Vorax / VX")
         await canal.send(embed=embed, view=TicketPanelView())
@@ -1637,7 +1637,7 @@ async def ticket_setup(ctx):
                 "*⛓️ Rux: Mas pode vir sem medo, a gente tá aqui!! 🐾*"
             ),
             color=TICKET_COLOR_VORAX,
-            timestamp=datetime.utcnow(),
+            timestamp=discord.utils.utcnow(),
         )
         embed.set_footer(text="DRAX TICKET SYSTEM — VORAX GUARDIAN • Clã Vorax / VX")
         await canal.send(embed=embed, view=TicketPanelView())
@@ -1670,12 +1670,12 @@ async def fechar_ticket(ctx):
         title="🔒 Ticket Encerrado — VX Vorax",
         description=(
             f"🔥 **Drex:** Encerrado por {ctx.author.mention} "
-            f"em `{datetime.utcnow().strftime('%d/%m/%Y às %H:%M UTC')}`.\n"
+            f"em `{discord.utils.utcnow().strftime('%d/%m/%Y às %H:%M UTC')}`.\n"
             "⛓️ **Rux:** Obrigado por usar o sistema de tickets! 🐾\n\n"
             "*O canal será deletado em 5 segundos...*"
         ),
         color=TICKET_COLOR_CLOSE,
-        timestamp=datetime.utcnow(),
+        timestamp=discord.utils.utcnow(),
     )
     embed_close.set_footer(text="DRAX TICKET SYSTEM — VORAX GUARDIAN")
     await ctx.send(embed=embed_close)
