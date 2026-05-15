@@ -1576,38 +1576,59 @@ class TicketPanelView(discord.ui.View):
         self.add_item(TicketSelect())
 
 
-# ── Task que envia o painel uma única vez após o bot estar pronto ──
+TICKET_GIF_URL = (
+    "https://img.wattpad.com/041cf05fffadf8cba2ffd0e14d2f1d8b88111791/"
+    "68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f776174747061642d6d"
+    "656469612d736572766963652f53746f7279496d6167652f61383539466d584b347955"
+    "5144413d3d2d3536333036313432302e313532363863663066663634303939363333323"
+    "132353730323930342e676966"
+)
+
+
+async def _enviar_painel_tickets():
+    """Apaga o painel antigo e reenvia — chamado no boot e pelo !ticket_setup."""
+    canal = bot.get_channel(TICKET_PANEL_CHANNEL_ID)
+    if canal is None:
+        canal = await bot.fetch_channel(TICKET_PANEL_CHANNEL_ID)
+    if canal is None:
+        print(f"[Tickets] ❌ Canal {TICKET_PANEL_CHANNEL_ID} não encontrado.")
+        return None
+
+    # Apaga todas as mensagens do bot no canal
+    to_delete = []
+    async for msg in canal.history(limit=50):
+        if msg.author == bot.user:
+            to_delete.append(msg)
+    for msg in to_delete:
+        try:
+            await msg.delete()
+            await asyncio.sleep(0.3)
+        except Exception:
+            pass
+
+    # Embed com texto + GIF
+    embed = discord.Embed(
+        description=(
+            "🖤✨🤍\n\n"
+            "*___Para abrir o ticket basta clicar em `Escolha qual deseja.` "
+            "logo abaixo, e selecionar o que deseja. Após selecionado, será "
+            "aberto um canal privado onde poderá falar com a nossa equipe Staff.___*"
+        ),
+        color=TICKET_COLOR_VORAX,
+    )
+    embed.set_image(url=TICKET_GIF_URL)
+
+    await canal.send(embed=embed, view=TicketPanelView())
+    print(f"[Tickets] ✅ Painel enviado com sucesso em #{canal.name}!")
+    return canal
+
+
+# ── Task que reinicia o painel automaticamente ao ligar o bot ──
 @tasks.loop(count=1)
 async def ticket_panel_task():
-    print("[Tickets] 🔄 Iniciando envio do painel de tickets...")
+    print("[Tickets] 🔄 Reiniciando painel de tickets no boot...")
     try:
-        canal = bot.get_channel(TICKET_PANEL_CHANNEL_ID)
-        if canal is None:
-            print(f"[Tickets] ⚠️ get_channel falhou, tentando fetch_channel...")
-            canal = await bot.fetch_channel(TICKET_PANEL_CHANNEL_ID)
-        if canal is None:
-            print(f"[Tickets] ❌ Canal {TICKET_PANEL_CHANNEL_ID} não encontrado em nenhum método.")
-            return
-        print(f"[Tickets] ✅ Canal encontrado: #{canal.name}")
-        # Verifica se já tem painel
-        async for msg in canal.history(limit=30):
-            if msg.author == bot.user and msg.embeds:
-                desc = msg.embeds[0].description or ""
-                if "Escolha qual deseja" in desc or "SISTEMA DE TICKETS" in (msg.embeds[0].title or ""):
-                    print("[Tickets] ✅ Painel já existe — não reenviando.")
-                    return
-        # Envia o painel
-        embed = discord.Embed(
-            description=(
-                "🖤✨🤍\n\n"
-                "*___Para abrir o ticket basta clicar em `Escolha qual deseja.` "
-                "logo abaixo, e selecionar o que deseja. Após selecionado, será "
-                "aberto um canal privado onde poderá falar com a nossa equipe Staff.___*"
-            ),
-            color=TICKET_COLOR_VORAX,
-        )
-        await canal.send(embed=embed, view=TicketPanelView())
-        print(f"[Tickets] ✅ Painel enviado com sucesso em #{canal.name}!")
+        await _enviar_painel_tickets()
     except Exception as e:
         print(f"[Tickets] ❌ Erro: {e}")
 
@@ -1622,28 +1643,9 @@ async def before_ticket_panel():
 async def ticket_setup(ctx):
     """Reenvia o painel de tickets (apaga o antigo). Apenas admins."""
     try:
-        canal = bot.get_channel(TICKET_PANEL_CHANNEL_ID)
-        if canal is None:
-            canal = await bot.fetch_channel(TICKET_PANEL_CHANNEL_ID)
-        # Apaga painel antigo
-        async for msg in canal.history(limit=30):
-            if msg.author == bot.user and msg.embeds:
-                desc = msg.embeds[0].description or ""
-                if "Escolha qual deseja" in desc or "SISTEMA DE TICKETS" in (msg.embeds[0].title or ""):
-                    await msg.delete()
-                    break
-        # Reenvia
-        embed = discord.Embed(
-            description=(
-                "🖤✨🤍\n\n"
-                "*___Para abrir o ticket basta clicar em `Escolha qual deseja.` "
-                "logo abaixo, e selecionar o que deseja. Após selecionado, será "
-                "aberto um canal privado onde poderá falar com a nossa equipe Staff.___*"
-            ),
-            color=TICKET_COLOR_VORAX,
-        )
-        await canal.send(embed=embed, view=TicketPanelView())
-        await ctx.send(f"✅ Painel reenviado em {canal.mention}!", delete_after=8)
+        canal = await _enviar_painel_tickets()
+        if canal:
+            await ctx.send(f"✅ Painel reenviado em {canal.mention}!", delete_after=8)
     except Exception as e:
         await ctx.send(f"❌ Erro: {e}")
     try:
