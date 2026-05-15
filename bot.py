@@ -1691,6 +1691,223 @@ async def fechar_ticket(ctx):
 
 
 # ═══════════════════════════════════════════════════════════
+#  SISTEMA DE LIBERAÇÃO DE MEMBROS — VORAX GUARDIAN
+# ═══════════════════════════════════════════════════════════
+
+LIBERACAO_CHANNEL_ID = 1498950947953705077
+LIBERACAO_CARGOS_IDS = [
+    1504988232335753357,
+    1504988318037967029,
+    1504988661568110762,
+]
+
+
+# ── Botão Verde: Liberar ────────────────────────────────────────────
+class LiberarButton(discord.ui.Button):
+    def __init__(self, member_id: int):
+        super().__init__(
+            style=discord.ButtonStyle.success,
+            label="✅ Liberar",
+            custom_id=f"lib_liberar_{member_id}",
+        )
+        self.member_id = member_id
+
+    async def callback(self, interaction: discord.Interaction):
+        guild  = interaction.guild
+        member = guild.get_member(self.member_id)
+
+        # Desabilita todos os botões
+        for item in self.view.children:
+            item.disabled = True
+
+        if not member:
+            await interaction.response.edit_message(
+                content="⚠️ Membro não encontrado (pode ter saído do servidor).",
+                view=self.view,
+            )
+            return
+
+        # Atribui os cargos
+        for role_id in LIBERACAO_CARGOS_IDS:
+            role = guild.get_role(role_id)
+            if role:
+                try:
+                    await member.add_roles(role, reason=f"Liberado por {interaction.user}")
+                except Exception:
+                    pass
+
+        # Atualiza o embed
+        embed = interaction.message.embeds[0] if interaction.message.embeds else discord.Embed()
+        embed.color = discord.Color.green()
+        embed.add_field(
+            name="✅ Decisão",
+            value=f"**Liberado** por {interaction.user.mention}",
+            inline=False,
+        )
+        await interaction.response.edit_message(embed=embed, view=self.view)
+
+        # DM pro membro
+        try:
+            dm = discord.Embed(
+                title="✅ Entrada Aprovada — VX Vorax",
+                description=(
+                    "🐺 **Rax:** Seja bem-vindo(a) ao clã! Sua entrada foi **aprovada**.\n"
+                    "🔥 **Drex:** Seus cargos já foram atribuídos. Explore o servidor!\n"
+                    "⛓️ **Rux:** Qualquer dúvida, a Staff tá aqui pra você! 🐾"
+                ),
+                color=discord.Color.green(),
+                timestamp=discord.utils.utcnow(),
+            )
+            dm.set_footer(text="VX Vorax — Guardião das Trevas")
+            await member.send(embed=dm)
+        except Exception:
+            pass
+
+
+# ── Botão Vermelho: Negar ───────────────────────────────────────────
+class NegarButton(discord.ui.Button):
+    def __init__(self, member_id: int):
+        super().__init__(
+            style=discord.ButtonStyle.danger,
+            label="❌ Negar",
+            custom_id=f"lib_negar_{member_id}",
+        )
+        self.member_id = member_id
+
+    async def callback(self, interaction: discord.Interaction):
+        guild  = interaction.guild
+        member = guild.get_member(self.member_id)
+
+        for item in self.view.children:
+            item.disabled = True
+
+        embed = interaction.message.embeds[0] if interaction.message.embeds else discord.Embed()
+        embed.color = discord.Color.red()
+        embed.add_field(
+            name="❌ Decisão",
+            value=f"**Negado** por {interaction.user.mention}",
+            inline=False,
+        )
+        await interaction.response.edit_message(embed=embed, view=self.view)
+
+        if member:
+            # DM antes de kickar
+            try:
+                dm = discord.Embed(
+                    title="❌ Entrada Negada — VX Vorax",
+                    description=(
+                        "🐺 **Rax:** Infelizmente sua entrada no clã foi **negada**.\n"
+                        "🔥 **Drex:** Caso acredite que foi um engano, entre em contato com a Staff.\n"
+                        "⛓️ **Rux:** Até mais! 🐾"
+                    ),
+                    color=discord.Color.red(),
+                    timestamp=discord.utils.utcnow(),
+                )
+                dm.set_footer(text="VX Vorax — Guardião das Trevas")
+                await member.send(embed=dm)
+            except Exception:
+                pass
+            try:
+                await member.kick(reason=f"Entrada negada por {interaction.user}")
+            except Exception:
+                pass
+
+
+# ── Botão Cinza: Aguardar ───────────────────────────────────────────
+class AguardarButton(discord.ui.Button):
+    def __init__(self, member_id: int):
+        super().__init__(
+            style=discord.ButtonStyle.secondary,
+            label="⏳ Aguardar",
+            custom_id=f"lib_aguardar_{member_id}",
+        )
+        self.member_id = member_id
+
+    async def callback(self, interaction: discord.Interaction):
+        guild  = interaction.guild
+        member = guild.get_member(self.member_id)
+
+        # Desabilita Aguardar, mas mantém Liberar e Negar ativos
+        for item in self.view.children:
+            item.disabled = isinstance(item, AguardarButton)
+
+        embed = interaction.message.embeds[0] if interaction.message.embeds else discord.Embed()
+        embed.color = discord.Color.yellow()
+        embed.add_field(
+            name="⏳ Decisão",
+            value=f"Em **espera** — sinalizado por {interaction.user.mention}",
+            inline=False,
+        )
+        await interaction.response.edit_message(embed=embed, view=self.view)
+
+        if member:
+            try:
+                dm = discord.Embed(
+                    title="⏳ Entrada em Análise — VX Vorax",
+                    description=(
+                        "🐺 **Rax:** Sua entrada está sendo **analisada** pela Staff.\n"
+                        "🔥 **Drex:** Em breve você receberá uma resposta definitiva.\n"
+                        "⛓️ **Rux:** Aguarde com calma, tá? 🐾"
+                    ),
+                    color=discord.Color.yellow(),
+                    timestamp=discord.utils.utcnow(),
+                )
+                dm.set_footer(text="VX Vorax — Guardião das Trevas")
+                await member.send(embed=dm)
+            except Exception:
+                pass
+
+
+# ── View principal de liberação ─────────────────────────────────────
+class LiberacaoView(discord.ui.View):
+    def __init__(self, member_id: int):
+        super().__init__(timeout=None)
+        self.add_item(LiberarButton(member_id))
+        self.add_item(NegarButton(member_id))
+        self.add_item(AguardarButton(member_id))
+
+
+# ── Evento: membro entra no servidor ───────────────────────────────
+@bot.listen("on_member_join")
+async def liberacao_on_member_join(member: discord.Member):
+    if member.bot:
+        return
+
+    channel = bot.get_channel(LIBERACAO_CHANNEL_ID)
+    if not channel:
+        return
+
+    idade_dias = (discord.utils.utcnow() - member.created_at).days
+
+    embed = discord.Embed(
+        title="🔓 Novo Membro — Verificação de Entrada",
+        description=(
+            f"👤 {member.mention} · **{member}** · `{member.id}`\n\n"
+            "🐺 **Rax:** Um novo membro chegou! Analise e decida.\n"
+            "🔥 **Drex:** Verifique as informações da conta abaixo.\n"
+            "⛓️ **Rux:** A segurança do clã depende dessa decisão! 🐾"
+        ),
+        color=0x8b0000,
+        timestamp=discord.utils.utcnow(),
+    )
+    embed.add_field(
+        name="📋 Informações da Conta",
+        value=(
+            f"📅 Criada em: `{member.created_at.strftime('%d/%m/%Y')}`\n"
+            f"🕐 Idade: `{idade_dias} dia{'s' if idade_dias != 1 else ''}`\n"
+            f"🖼️ Avatar: `{'✅ Tem' if member.avatar else '❌ Não tem'}`"
+        ),
+        inline=False,
+    )
+    embed.set_footer(text="DRAX LIBERAÇÃO — VORAX GUARDIAN • Use os botões abaixo para decidir.")
+    if member.display_avatar:
+        embed.set_thumbnail(url=member.display_avatar.url)
+
+    view = LiberacaoView(member.id)
+    await channel.send(embed=embed, view=view)
+
+
+# ═══════════════════════════════════════════════════════════
 #  START
 # ═══════════════════════════════════════════════════════════
 
